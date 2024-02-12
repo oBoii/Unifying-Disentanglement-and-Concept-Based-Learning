@@ -1,6 +1,5 @@
 import torch
 from torch import optim, nn, utils, Tensor
-from torchvision.datasets import MNIST
 from torchvision.transforms import ToTensor
 import lightning as L
 import numpy as np
@@ -9,17 +8,18 @@ from Utility import Utility
 from architecture import Encoder, Decoder, compute_mmd
 import matplotlib.pyplot as plt
 
+from data_module import MNISTDataModule, DSPRITEDataModule
+
 
 class LitAutoEncoder(L.LightningModule):
-    def __init__(self, encoder, decoder):
+    def __init__(self, encoder: Encoder, decoder: Decoder):
         super().__init__()
         self.encoder = encoder
         self.decoder = decoder
 
     def training_step(self, batch, batch_idx):
-        x, y = batch
-        true_samples = torch.randn((200, z_dim), requires_grad=False).to(x.device)
-        # x = x.view(x.size(0), -1)
+        x, y = batch  # x.shape: (200, 1, 64, 64), y.shape: (200, 1, 6)
+        true_samples = torch.randn((200, z_dim), requires_grad=False, device=x.device)
 
         z = self.encoder(x)
         x_reconstructed = self.decoder(z)
@@ -33,7 +33,7 @@ class LitAutoEncoder(L.LightningModule):
         return loss
 
     def configure_optimizers(self):
-        optimizer = optim.Adam(self.parameters(), lr=1e-3)
+        optimizer = optim.Adam(self.parameters(), lr=1e-4)
         return optimizer
 
 
@@ -56,25 +56,23 @@ class CustomCallbacks(L.Callback):
 if __name__ == "__main__":
     torch.set_float32_matmul_precision('medium')
 
+    is_MNIST: bool = False
     z_dim = 2
-    encoder = Encoder(z_dim)
-    decoder = Decoder(z_dim)
+    height = 28 if is_MNIST else 64
+    encoder = Encoder(z_dim, height)
+    decoder = Decoder(z_dim, height)
 
     autoencoder = LitAutoEncoder(encoder, decoder)
-    dataset = MNIST("./tmp/MNIST", download=True, transform=ToTensor())
-    # pin_memory=True is used to speed up the data transfer from CPU to GPU
-    # persistent_workers=True is used to speed up the data loading process
-    train_loader = utils.data.DataLoader(
-        dataset, batch_size=200, num_workers=4, shuffle=True, pin_memory=True,
-        persistent_workers=True)
+
+    data = MNISTDataModule() if is_MNIST else DSPRITEDataModule(subset=False)
 
     # Train the model
-    trainer = L.Trainer(limit_train_batches=1.0, max_epochs=10, accelerator="gpu", devices="1",
+    trainer = L.Trainer(limit_train_batches=.1, max_epochs=10, accelerator="gpu", devices="1",
                         callbacks=[CustomCallbacks(plot_ever_n_epoch=4)])
-    trainer.fit(model=autoencoder, train_dataloaders=train_loader)
+    trainer.fit(model=autoencoder, datamodule=data)
 
     # Load checkpoint
-    checkpoint = "./lightning_logs/version_6/checkpoints/epoch=0-step=100.ckpt"
+    checkpoint = "./lightning_logs/version_39/checkpoints/epoch=9-step=2950.ckpt"
     autoencoder = LitAutoEncoder.load_from_checkpoint(checkpoint, encoder=encoder, decoder=decoder)
 
     # Choose your trained nn.Module
@@ -82,7 +80,7 @@ if __name__ == "__main__":
     encoder.eval()
 
     # Embed 4 fake images!
-    fake_image_batch = torch.rand((4, 1, 28, 28), device=autoencoder.device)
+    fake_image_batch = torch.rand((4, 1, height, height), device=autoencoder.device)
     embeddings = encoder(fake_image_batch)
     print("⚡" * 20, "\nPredictions (4 image embeddings):\n", embeddings, "\n", "⚡" * 20)
 

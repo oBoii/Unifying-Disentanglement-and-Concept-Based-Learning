@@ -3,7 +3,7 @@ import torch
 
 # Encoder and decoder use the DC-GAN architecture
 class Encoder(torch.nn.Module):
-    def __init__(self, z_dim):
+    def __init__(self, z_dim, height):
         super(Encoder, self).__init__()
         self.model = torch.nn.ModuleList([
             torch.nn.Conv2d(1, 64, 4, 2, padding=1),
@@ -11,7 +11,7 @@ class Encoder(torch.nn.Module):
             torch.nn.Conv2d(64, 128, 4, 2, padding=1),
             torch.nn.LeakyReLU(),
             torch.nn.Flatten(),
-            torch.nn.Linear(6272, 1024),
+            torch.nn.Linear(128 * (height // 4) * (height // 4), 1024),
             torch.nn.LeakyReLU(),
             torch.nn.Linear(1024, z_dim)
         ])
@@ -26,15 +26,14 @@ class Encoder(torch.nn.Module):
 
 
 class Decoder(torch.nn.Module):
-    def __init__(self, z_dim):
+    def __init__(self, z_dim, height):
         super(Decoder, self).__init__()
         self.model = torch.nn.ModuleList([
             torch.nn.Linear(z_dim, 1024),
             torch.nn.ReLU(),
-            torch.nn.Linear(1024, 7 * 7 * 128),
+            torch.nn.Linear(1024, 128 * (height // 4) * (height // 4)),
             torch.nn.ReLU(),
-            # Reshape((128, 7, 7,)),
-            torch.nn.Unflatten(1, (128, 7, 7)),
+            torch.nn.Unflatten(1, (128, height // 4, height // 4)),
             torch.nn.ConvTranspose2d(128, 64, 4, 2, padding=1),
             torch.nn.ReLU(),
             torch.nn.ConvTranspose2d(64, 1, 4, 2, padding=1),
