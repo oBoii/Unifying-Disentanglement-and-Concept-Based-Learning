@@ -38,14 +38,14 @@ class DSPRITEDataset(Dataset):
     def __init__(self, data_folder, transform=None):
         self.data_folder = data_folder
         self.image_folder = f"{data_folder}/input"
-        self.latent_classes_folder = f"{data_folder}/latents_classes"
-        self.latent_values_folder = f"{data_folder}/latents_values"
+        self.latent_classes_folder = f"{data_folder}/latent_classes"
+        self.latent_values_folder = f"{data_folder}/latent_values"
         self.transform = transform
 
         # count the number of files in the folder
-        self.nb_files = len(
-            [name for name in os.listdir(self.image_folder) if os.path.isfile(os.path.join(self.image_folder, name))])
-        x = "a"
+        self.nb_files = 737_280
+        # len(
+        # [name for name in os.listdir(self.image_folder) if os.path.isfile(os.path.join(self.image_folder, name))])
 
     def __len__(self):
         return self.nb_files
@@ -64,11 +64,11 @@ class DSPRITEDataset(Dataset):
 
 
 class DSPRITEDataModule(L.LightningDataModule):
-    def __init__(self, data_dir: str = "./dsprites-dataset/", batch_size: int = 200, subset: bool = False):
+    def __init__(self, data_dir: str = "./dsprites-dataset/", batch_size: int = 100, workers: int = 1):
         super().__init__()
         self.data_dir = data_dir
-        assert subset == False, "Subset is not implemented yet"
         self.batch_size = batch_size
+        self.workers = workers
 
     def setup(self, stage: str):
         self.transform = transforms.Compose([transforms.ToTensor()])
@@ -83,7 +83,9 @@ class DSPRITEDataModule(L.LightningDataModule):
         return self._dataloader(test_dataset)
 
     def _dataloader(self, dataset):
-        return DataLoader(dataset, batch_size=self.batch_size, num_workers=19, pin_memory=True,
+        # return DataLoader(dataset, batch_size=self.batch_size, num_workers=19, pin_memory=True,
+        #                   persistent_workers=True, shuffle=True)
+        return DataLoader(dataset, batch_size=self.batch_size, num_workers=self.workers, pin_memory=True,
                           persistent_workers=True, shuffle=True)
 
 

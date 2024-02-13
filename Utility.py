@@ -1,4 +1,7 @@
 import numpy as np
+import os
+
+
 class Utility:
     @staticmethod
     def convert_to_display(samples):
@@ -8,3 +11,7 @@ class Utility:
         samples = np.transpose(samples, axes=[1, 0, 2, 3])
         samples = np.reshape(samples, [height * cnt, width * cnt])
         return samples
+
+    @staticmethod
+    def get_files_in_directory(directory):
+        return [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]

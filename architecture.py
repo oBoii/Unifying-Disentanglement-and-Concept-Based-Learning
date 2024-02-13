@@ -17,11 +17,7 @@ class Encoder(torch.nn.Module):
         ])
 
     def forward(self, x):
-        # print("Encoder")
-        # print(x.size())
-        for layer in self.model:
-            x = layer(x)
-            # print(x.size())
+        x = self.model(x)
         return x
 
 
@@ -41,8 +37,7 @@ class Decoder(torch.nn.Module):
         ])
 
     def forward(self, x):
-        for layer in self.model:
-            x = layer(x)
+        x = self.model(x)
         return x
 
 
