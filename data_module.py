@@ -5,7 +5,10 @@ from torchvision.datasets import MNIST
 from torchvision.transforms import ToTensor
 from torch.utils.data import Dataset, DataLoader
 from torchvision.datasets import ImageFolder
+from torchvision import transforms
 import numpy as np
+import os
+import cv2
 
 from architecture import Encoder
 
@@ -31,51 +34,53 @@ class MNISTDataModule(L.LightningDataModule):
                           persistent_workers=True, shuffle=True)
 
 
-class DspriteDataset(Dataset):
+class DSPRITEDataset(Dataset):
     def __init__(self, data_folder, transform=None):
         self.data_folder = data_folder
-        self.image_folder = ImageFolder(data_folder, transform=transform)
+        self.image_folder = f"{data_folder}/input"
+        self.latent_classes_folder = f"{data_folder}/latents_classes"
+        self.latent_values_folder = f"{data_folder}/latents_values"
+        self.transform = transform
+
+        # count the number of files in the folder
+        self.nb_files = len(
+            [name for name in os.listdir(self.image_folder) if os.path.isfile(os.path.join(self.image_folder, name))])
+        x = "a"
 
     def __len__(self):
-        return len(self.image_folder)
+        return self.nb_files
 
     def __getitem__(self, idx):
-        return self.image_folder[idx]
+        img_path = f"{self.image_folder}/{idx}.png"
+        latent_classes_path = f"{self.latent_classes_folder}/{idx}.npy"
+        latent_values_path = f"{self.latent_values_folder}/{idx}.npy"
+
+        image = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+        image = self.transform(image)
+        image = image / 255.0
+        label = np.load(latent_classes_path)
+        label = torch.tensor(label, dtype=torch.float32)
+        return image, label
+
 
 class DSPRITEDataModule(L.LightningDataModule):
     def __init__(self, data_dir: str = "./dsprites-dataset/", batch_size: int = 200, subset: bool = False):
         super().__init__()
         self.data_dir = data_dir
+        assert subset == False, "Subset is not implemented yet"
         self.batch_size = batch_size
-        self.subset = subset
 
     def setup(self, stage: str):
-        file_name = self.data_dir + ("dsprites_subset.npz" if self.subset else "dsprites_ndarray_co1sh3sc6or40x32y32_64x64.npz")
-        dataset = np.load(file_name, encoding='bytes')
-        images = dataset['imgs']
-        images = np.expand_dims(images, axis=1)
-        images = torch.tensor(images, dtype=torch.float32)
-        images = images / 255.0  # shape: (737280, 1, 64, 64)
-
-        latent_values = dataset['latents_values']
-        latent_values = np.expand_dims(latent_values, axis=1)
-        latents_values = torch.tensor(latent_values, dtype=torch.float32)
-
-        latents_classes = dataset['latents_classes']
-
-        data = TensorDataset(images, latents_values)
-
-        # Split the dataset into training and test
-        n = len(data)
-        n_train = int(0.8 * n)
-        n_test = n - n_train
-        self.dsprite_train, self.dsprite_test = random_split(data, [n_train, n_test])
+        self.transform = transforms.Compose([transforms.ToTensor()])
 
     def train_dataloader(self):
-        return self._dataloader(self.dsprite_train)
+        train_dataset = DSPRITEDataset(self.data_dir, transform=self.transform)
+        return self._dataloader(train_dataset)
 
     def test_dataloader(self):
-        return self._dataloader(self.dsprite_test)
+        # warning: currently, the test dataset is the same as the train dataset
+        test_dataset = DSPRITEDataset(self.data_dir, transform=self.transform)
+        return self._dataloader(test_dataset)
 
     def _dataloader(self, dataset):
         return DataLoader(dataset, batch_size=self.batch_size, num_workers=19, pin_memory=True,
@@ -86,5 +91,5 @@ if __name__ == "__main__":
     mnist = MNISTDataModule()
     mnist.setup("train")
     for x, y in mnist.train_dataloader():
-        print(x.shape, y.shape) # torch.Size([200, 1, 28, 28]) torch.Size([200])
+        print(x.shape, y.shape)  # torch.Size([200, 1, 28, 28]) torch.Size([200])
         break
