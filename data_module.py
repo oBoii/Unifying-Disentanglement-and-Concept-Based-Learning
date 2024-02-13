@@ -3,6 +3,8 @@ import torch
 from torch.utils.data import DataLoader, random_split, TensorDataset
 from torchvision.datasets import MNIST
 from torchvision.transforms import ToTensor
+from torch.utils.data import Dataset, DataLoader
+from torchvision.datasets import ImageFolder
 import numpy as np
 
 from architecture import Encoder
@@ -28,6 +30,17 @@ class MNISTDataModule(L.LightningDataModule):
         return DataLoader(dataset, batch_size=self.batch_size, num_workers=19, pin_memory=True,
                           persistent_workers=True, shuffle=True)
 
+
+class DspriteDataset(Dataset):
+    def __init__(self, data_folder, transform=None):
+        self.data_folder = data_folder
+        self.image_folder = ImageFolder(data_folder, transform=transform)
+
+    def __len__(self):
+        return len(self.image_folder)
+
+    def __getitem__(self, idx):
+        return self.image_folder[idx]
 
 class DSPRITEDataModule(L.LightningDataModule):
     def __init__(self, data_dir: str = "./dsprites-dataset/", batch_size: int = 200, subset: bool = False):
