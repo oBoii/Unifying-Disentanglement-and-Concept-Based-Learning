@@ -1,7 +1,7 @@
 import torch
 import lightning as L
-from architecture import Encoder, Decoder
-# from architecture_burgess import Encoder, Decoder
+# from architecture import Encoder, Decoder
+from architecture_burgess import Encoder, Decoder
 from data_module import DSPRITEDataModule
 from main import LitAutoEncoder
 import numpy as np
@@ -28,7 +28,7 @@ if __name__ == "__main__":
     height = 64
     encoder = Encoder(latent_dim=z_dim, img_size=(1, height, height))
     decoder = Decoder(latent_dim=z_dim, img_size=(1, height, height))
-    version = "87"  # 49
+    version = "97"  # 49
     checkpoint_dir = f"./lightning_logs/version_{version}/checkpoints"
     files_in_checkpoint_dir = Utility.get_files_in_directory(checkpoint_dir)
     checkpoint = f"{checkpoint_dir}/{files_in_checkpoint_dir[-1]}"

@@ -30,15 +30,16 @@ class WeightedMSELoss(torch.nn.Module):
 
 
 class LitAutoEncoder(L.LightningModule):
-    def __init__(self, encoder: Encoder, decoder: Decoder):
+    def __init__(self, encoder: Encoder, decoder: Decoder,
+                 weight_for_0: float = 1.0, weight_for_1: float = 2.0, beta: float = 1.0):
         super().__init__()
         self.encoder = encoder
         self.decoder = decoder
-        self.loss_func: WeightedMSELoss = WeightedMSELoss(1.0, 10.0, 1)
+        self.loss_func: WeightedMSELoss = WeightedMSELoss(weight_for_0, weight_for_1, beta)
 
         self.test_losses = []
 
-        self.save_hyperparameters()
+        self.save_hyperparameters(ignore=["encoder", "decoder", "loss_func"])
 
     def training_step(self, batch, batch_idx):
         x, y = batch  # x.shape: (200, 1, 64, 64), y.shape: (200, 1, 6)

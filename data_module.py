@@ -73,18 +73,28 @@ class DSPRITEDataModule(L.LightningDataModule):
         self.transform = transforms.Compose([
             transforms.ToTensor()])
 
+        # Load the full dataset
+        full_dataset = DSPRITEDataset(self.data_dir, transform=self.transform)
+
+        # Determine the lengths of splits
+        train_len = int(len(full_dataset) * 0.7)
+        val_len = int(len(full_dataset) * 0.15)
+        test_len = len(full_dataset) - train_len - val_len
+
+        # Split the dataset
+        self.train_dataset, self.val_dataset, self.test_dataset = random_split(
+            full_dataset, [train_len, val_len, test_len])
+
     def train_dataloader(self):
-        train_dataset = DSPRITEDataset(self.data_dir, transform=self.transform)
-        return self._dataloader(train_dataset, shuffle=True)
+        return self._dataloader(self.train_dataset, shuffle=True)
+
+    def val_dataloader(self):
+        return self._dataloader(self.val_dataset, shuffle=False)
 
     def test_dataloader(self):
-        # warning: currently, the test dataset is the same as the train dataset
-        test_dataset = DSPRITEDataset(self.data_dir, transform=self.transform)
-        return self._dataloader(test_dataset, shuffle=False)
+        return self._dataloader(self.test_dataset, shuffle=False)
 
     def _dataloader(self, dataset, shuffle: bool):
-        # return DataLoader(dataset, batch_size=self.batch_size, num_workers=19, pin_memory=True,
-        #                   persistent_workers=True, shuffle=True)
         return DataLoader(dataset, batch_size=self.batch_size, num_workers=self.workers, pin_memory=True,
                           persistent_workers=True, shuffle=shuffle)
 
