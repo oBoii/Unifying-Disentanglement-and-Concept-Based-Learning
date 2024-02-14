@@ -40,7 +40,7 @@ class LitAutoEncoder(L.LightningModule):
 
         mmd = compute_mmd(true_samples, z)
         nll = (x_reconstructed - x).pow(2).mean()  # Negative log likelihood
-        loss = nll + mmd
+        loss = nll #+ mmd
 
         # loss = self.loss_func(x_reconstructed, x)  + mmd
 
@@ -49,7 +49,7 @@ class LitAutoEncoder(L.LightningModule):
         return loss
 
     def configure_optimizers(self):
-        optimizer = optim.Adam(self.parameters(), lr=1e-3)
+        optimizer = optim.Adam(self.parameters(), lr=1e-5)
         return optimizer
 
 
@@ -83,7 +83,7 @@ if __name__ == "__main__":
     data = MNISTDataModule() if is_MNIST else DSPRITEDataModule(workers=10)
 
     # Train the model
-    trainer = L.Trainer(limit_train_batches=1.0, max_epochs=20, accelerator="gpu", devices="1",
+    trainer = L.Trainer(limit_train_batches=.1, max_epochs=5, accelerator="gpu", devices="1",
                         callbacks=[CustomCallbacks(plot_ever_n_epoch=4)])
     trainer.fit(model=autoencoder, datamodule=data)
 
