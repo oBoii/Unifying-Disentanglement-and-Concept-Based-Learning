@@ -26,7 +26,7 @@ def display_images(images, path):
 
 if __name__ == "__main__":
     # Load checkpoint
-    z_dim = 32  # 4096
+    z_dim = 2 #32  # 4096
     height = 64
     encoder = Encoder(latent_dim=z_dim, img_size=(1, height, height))
     decoder = Decoder(latent_dim=z_dim, img_size=(1, height, height))
@@ -61,5 +61,5 @@ if __name__ == "__main__":
 
 
 # interesting models are: 104 (32 dim)
-# 105 (8 dim)
+# 105 (8 dim), 106 (2 dim)
 # 103 ? 4096 dim

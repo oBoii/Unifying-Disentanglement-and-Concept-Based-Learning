@@ -103,7 +103,7 @@ if __name__ == "__main__":
     torch.set_float32_matmul_precision('medium')
 
     is_MNIST: bool = False
-    z_dim = 8
+    z_dim = 2
     height = 28 if is_MNIST else 64
     encoder = Encoder(latent_dim=z_dim, img_size=(1, height, height))
     decoder = Decoder(latent_dim=z_dim, img_size=(1, height, height))
