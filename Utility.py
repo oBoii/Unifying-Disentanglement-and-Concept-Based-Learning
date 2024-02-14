@@ -15,3 +15,11 @@ class Utility:
     @staticmethod
     def get_files_in_directory(directory):
         return [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
+
+    @staticmethod
+    def get_directories_in_directory(directory):
+        return [f for f in os.listdir(directory) if os.path.isdir(os.path.join(directory, f))]
+
+    @staticmethod
+    def get_latest_version():
+        return sorted([int(f.split("_")[1]) for f in Utility.get_directories_in_directory("./lightning_logs")])[-1]

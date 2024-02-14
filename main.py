@@ -1,14 +1,14 @@
+# pytorch lightning validation printing bug:
+# https://stackoverflow.com/questions/59455268/how-to-disable-progress-bar-in-pytorch-lightning/66731318#66731318
+
 import torch
-from torch import optim, nn, utils, Tensor
-from torchvision.transforms import ToTensor
+from torch import optim
 import lightning as L
-import numpy as np
 
 from architecture import compute_mmd
 from data_module import MNISTDataModule, DSPRITEDataModule
 from utility import Utility
 from architecture import Encoder, Decoder
-# from architecture_burgess import Encoder, Decoder
 import matplotlib.pyplot as plt
 
 
@@ -31,7 +31,7 @@ class WeightedMSELoss(torch.nn.Module):
 
 class LitAutoEncoder(L.LightningModule):
     def __init__(self, encoder: Encoder, decoder: Decoder,
-                 weight_for_0: float = 1.0, weight_for_1: float = 2.0, beta: float = 1.0):
+                 weight_for_0: float = 1.0, weight_for_1: float = 1.0, beta: float = 1.0, z_dim: int = 32):
         super().__init__()
         self.encoder = encoder
         self.decoder = decoder
@@ -92,24 +92,28 @@ class CustomCallbacks(L.Callback):
             samples = pl_module.decoder(gen_z)
             samples = samples.permute(0, 2, 3, 1).contiguous().cpu().data.numpy()
             plt.imshow(Utility.convert_to_display(samples), cmap='Greys_r')
-            plt.show()
+
+            # store in log folder
+            plt.savefig(f"./lightning_logs/version_{trainer.logger.version}/generated_images_epoch_{trainer.current_epoch}.png")
+
+            # plt.show()
 
 
 if __name__ == "__main__":
     torch.set_float32_matmul_precision('medium')
 
     is_MNIST: bool = False
-    z_dim = 32
+    z_dim = 8
     height = 28 if is_MNIST else 64
     encoder = Encoder(latent_dim=z_dim, img_size=(1, height, height))
     decoder = Decoder(latent_dim=z_dim, img_size=(1, height, height))
 
-    autoencoder = LitAutoEncoder(encoder, decoder)
+    autoencoder = LitAutoEncoder(encoder, decoder, z_dim=z_dim)
 
     data = MNISTDataModule() if is_MNIST else DSPRITEDataModule(workers=10)
 
     # Train the model
-    trainer = L.Trainer(limit_train_batches=.1, max_epochs=30, accelerator="gpu", devices="1",
+    trainer = L.Trainer(limit_train_batches=.1, max_epochs=10, accelerator="gpu", devices="1",
                         callbacks=[CustomCallbacks(plot_ever_n_epoch=4)])
     trainer.fit(model=autoencoder, datamodule=data)
     trainer.test(model=autoencoder, datamodule=data)
