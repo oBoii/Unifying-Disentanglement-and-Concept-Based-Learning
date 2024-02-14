@@ -3,7 +3,10 @@ import torch
 
 # Encoder and decoder use the DC-GAN architecture
 class Encoder(torch.nn.Module):
-    def __init__(self, z_dim, height):
+    def __init__(self, img_size: tuple, latent_dim: int = 10):
+        height = img_size[1]
+        z_dim = latent_dim
+
         super(Encoder, self).__init__()
         self.model = torch.nn.ModuleList([
             torch.nn.Conv2d(1, 64, 4, 2, padding=1),
@@ -17,12 +20,16 @@ class Encoder(torch.nn.Module):
         ])
 
     def forward(self, x):
-        x = self.model(x)
+        for layer in self.model:
+            x = layer(x)
         return x
 
 
 class Decoder(torch.nn.Module):
-    def __init__(self, z_dim, height):
+    def __init__(self, img_size: tuple, latent_dim: int = 10):
+        height = img_size[1]
+        z_dim = latent_dim
+
         super(Decoder, self).__init__()
         self.model = torch.nn.ModuleList([
             torch.nn.Linear(z_dim, 1024),
@@ -37,7 +44,8 @@ class Decoder(torch.nn.Module):
         ])
 
     def forward(self, x):
-        x = self.model(x)
+        for layer in self.model:
+            x = layer(x)
         return x
 
 

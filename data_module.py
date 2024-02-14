@@ -57,7 +57,6 @@ class DSPRITEDataset(Dataset):
 
         image = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
         image = self.transform(image)
-        image = image / 255.0
         label = np.load(latent_classes_path)
         label = torch.tensor(label, dtype=torch.float32)
         return image, label
@@ -71,7 +70,8 @@ class DSPRITEDataModule(L.LightningDataModule):
         self.workers = workers
 
     def setup(self, stage: str):
-        self.transform = transforms.Compose([transforms.ToTensor()])
+        self.transform = transforms.Compose([
+            transforms.ToTensor()])
 
     def train_dataloader(self):
         train_dataset = DSPRITEDataset(self.data_dir, transform=self.transform)
