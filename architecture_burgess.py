@@ -50,7 +50,7 @@ class Encoder(nn.Module):
             self.conv_64 = nn.Conv2d(hid_channels, hid_channels, kernel_size, **cnn_kwargs)
 
         # Fully connected layers
-        self.lin1 = nn.Linear(np.prod(self.reshape), hidden_dim)
+        self.lin1 = nn.Linear(np.prod(self.reshape), hidden_dim) # np.prod(self.reshape) = 32 * 4 * 4 = 512
         self.lin2 = nn.Linear(hidden_dim, hidden_dim)
 
         # Fully connected layers for mean and variance
@@ -67,12 +67,10 @@ class Encoder(nn.Module):
             x = torch.relu(self.conv_64(x))
 
         # Fully connected layers with ReLu activations
-        x = x.view((batch_size, -1))
+        x = x.view((batch_size, -1)) # Flatten
         x = torch.relu(self.lin1(x))
         x = torch.relu(self.lin2(x))
 
-        # Fully connected layer for log variance and mean
-        # Log std-dev in paper (bear in mind)
         mu_logvar = self.mu_logvar_gen(x)
         mu, logvar = mu_logvar.view(-1, self.latent_dim, 2).unbind(-1)
 

@@ -1,7 +1,7 @@
 import torch
 import lightning as L
-# from architecture import Encoder, Decoder
-from architecture_burgess import Encoder, Decoder
+from architecture import Encoder, Decoder
+# from architecture_burgess import Encoder, Decoder
 from data_module import DSPRITEDataModule
 from main import LitAutoEncoder
 import numpy as np

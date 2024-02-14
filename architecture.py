@@ -14,7 +14,7 @@ class Encoder(torch.nn.Module):
             torch.nn.Conv2d(64, 128, 4, 2, padding=1),
             torch.nn.LeakyReLU(),
             torch.nn.Flatten(),
-            torch.nn.Linear(128 * (height // 4) * (height // 4), 1024),
+            torch.nn.Linear(128 * (height // 4) * (height // 4), 1024),  # if h=64 -> 32768
             torch.nn.LeakyReLU(),
             torch.nn.Linear(1024, z_dim)
         ])

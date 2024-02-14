@@ -7,8 +7,8 @@ import numpy as np
 from architecture import compute_mmd
 from data_module import MNISTDataModule, DSPRITEDataModule
 from utility import Utility
-# from architecture import Encoder, Decoder, compute_mmd
-from architecture_burgess import Encoder, Decoder
+from architecture import Encoder, Decoder
+# from architecture_burgess import Encoder, Decoder
 import matplotlib.pyplot as plt
 
 
@@ -34,9 +34,11 @@ class LitAutoEncoder(L.LightningModule):
         super().__init__()
         self.encoder = encoder
         self.decoder = decoder
-        self.loss_func: WeightedMSELoss = WeightedMSELoss(1.0, 10.0, 0)
+        self.loss_func: WeightedMSELoss = WeightedMSELoss(1.0, 10.0, 1)
 
         self.test_losses = []
+
+        self.save_hyperparameters()
 
     def training_step(self, batch, batch_idx):
         x, y = batch  # x.shape: (200, 1, 64, 64), y.shape: (200, 1, 6)
@@ -47,6 +49,15 @@ class LitAutoEncoder(L.LightningModule):
 
         # Logging to TensorBoard (if installed) by default
         self.log("train_loss", loss)
+        return loss
+
+    # validation step
+    def validation_step(self, batch, batch_idx):
+        x, y = batch
+        z = self.encoder(x)
+        x_reconstructed = self.decoder(z)
+        loss = self.loss_func(x_reconstructed, x, z)
+        self.log("val_loss", loss)
         return loss
 
     def configure_optimizers(self):
@@ -97,7 +108,7 @@ if __name__ == "__main__":
     data = MNISTDataModule() if is_MNIST else DSPRITEDataModule(workers=10)
 
     # Train the model
-    trainer = L.Trainer(limit_train_batches=.1, max_epochs=5, accelerator="gpu", devices="1",
+    trainer = L.Trainer(limit_train_batches=.1, max_epochs=30, accelerator="gpu", devices="1",
                         callbacks=[CustomCallbacks(plot_ever_n_epoch=4)])
     trainer.fit(model=autoencoder, datamodule=data)
     trainer.test(model=autoencoder, datamodule=data)
