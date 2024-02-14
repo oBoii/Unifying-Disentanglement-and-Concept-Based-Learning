@@ -13,15 +13,20 @@ import matplotlib.pyplot as plt
 
 
 class WeightedMSELoss(torch.nn.Module):
-    def __init__(self, weight_for_0, weight_for_1):
+    def __init__(self, weight_for_0, weight_for_1, beta):
         super().__init__()
         self.weight_for_0 = weight_for_0
         self.weight_for_1 = weight_for_1
+        self.beta = beta
 
-    def forward(self, input, target):
-        one_im = target[0][0]
+    def forward(self, input, target, z):
         weights = torch.where(target == 1, self.weight_for_1, self.weight_for_0)
-        return torch.mean(weights * (input - target) ** 2)
+        if self.beta == 0:
+            return torch.mean(weights * (input - target) ** 2)
+        else:
+            true_samples = torch.randn((200, z_dim), requires_grad=False, device=input.device)
+            mmd = self.beta * compute_mmd(true_samples, z)
+            return torch.mean(weights * (input - target) ** 2) + mmd
 
 
 class LitAutoEncoder(L.LightningModule):
@@ -29,20 +34,16 @@ class LitAutoEncoder(L.LightningModule):
         super().__init__()
         self.encoder = encoder
         self.decoder = decoder
-        self.loss_func: WeightedMSELoss = WeightedMSELoss(1.0, 1.0)
+        self.loss_func: WeightedMSELoss = WeightedMSELoss(1.0, 10.0, 0)
+
+        self.test_losses = []
 
     def training_step(self, batch, batch_idx):
         x, y = batch  # x.shape: (200, 1, 64, 64), y.shape: (200, 1, 6)
-        true_samples = torch.randn((200, z_dim), requires_grad=False, device=x.device)
-
         z = self.encoder(x)
         x_reconstructed = self.decoder(z)
 
-        mmd = compute_mmd(true_samples, z)
-        nll = (x_reconstructed - x).pow(2).mean()  # Negative log likelihood
-        loss = nll #+ mmd
-
-        # loss = self.loss_func(x_reconstructed, x)  + mmd
+        loss = self.loss_func(x_reconstructed, x, z)
 
         # Logging to TensorBoard (if installed) by default
         self.log("train_loss", loss)
@@ -51,6 +52,19 @@ class LitAutoEncoder(L.LightningModule):
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), lr=1e-5)
         return optimizer
+
+    def test_step(self, batch, batch_idx):
+        x, y = batch
+        z = self.encoder(x)
+        x_reconstructed = self.decoder(z)
+        loss = self.loss_func(x_reconstructed, x, z)
+        self.test_losses.append(loss)
+        return {"test_loss": loss}
+
+    def on_test_epoch_end(self):
+        avg_loss = torch.stack(self.test_losses).mean()
+        self.log("avg_test_loss", avg_loss)
+        self.test_losses = []  # reset for the next epoch
 
 
 class CustomCallbacks(L.Callback):
@@ -86,6 +100,7 @@ if __name__ == "__main__":
     trainer = L.Trainer(limit_train_batches=.1, max_epochs=5, accelerator="gpu", devices="1",
                         callbacks=[CustomCallbacks(plot_ever_n_epoch=4)])
     trainer.fit(model=autoencoder, datamodule=data)
+    trainer.test(model=autoencoder, datamodule=data)
 
     # tensorboard --logdir .
     # tensorboard --logdir ./lightning_logs

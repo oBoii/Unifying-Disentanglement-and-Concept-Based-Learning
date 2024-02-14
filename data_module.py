@@ -75,18 +75,18 @@ class DSPRITEDataModule(L.LightningDataModule):
 
     def train_dataloader(self):
         train_dataset = DSPRITEDataset(self.data_dir, transform=self.transform)
-        return self._dataloader(train_dataset)
+        return self._dataloader(train_dataset, shuffle=True)
 
     def test_dataloader(self):
         # warning: currently, the test dataset is the same as the train dataset
         test_dataset = DSPRITEDataset(self.data_dir, transform=self.transform)
-        return self._dataloader(test_dataset)
+        return self._dataloader(test_dataset, shuffle=False)
 
-    def _dataloader(self, dataset):
+    def _dataloader(self, dataset, shuffle: bool):
         # return DataLoader(dataset, batch_size=self.batch_size, num_workers=19, pin_memory=True,
         #                   persistent_workers=True, shuffle=True)
         return DataLoader(dataset, batch_size=self.batch_size, num_workers=self.workers, pin_memory=True,
-                          persistent_workers=True, shuffle=True)
+                          persistent_workers=True, shuffle=shuffle)
 
 
 if __name__ == "__main__":
