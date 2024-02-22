@@ -22,4 +22,9 @@ class Utility:
 
     @staticmethod
     def get_latest_version():
-        return sorted([int(f.split("_")[1]) for f in Utility.get_directories_in_directory("./lightning_logs")])[-1]
+        # outdated was for tensorboard
+        # return sorted([int(f.split("_")[1]) for f in Utility.get_directories_in_directory("./lightning_logs")])[-1]
+
+        # now wandb, return the entire file name
+        return sorted(Utility.get_directories_in_directory("./wandb"))[-1] # eg: "run-20211007_123456-3k4j5l6m"
+

@@ -5,28 +5,15 @@ import torch
 from torch import optim
 import lightning as L
 
-from architecture import compute_mmd
 from data_module import MNISTDataModule, DSPRITEDataModule
 from utility import Utility
 from architecture import Encoder, Decoder
 import matplotlib.pyplot as plt
+from loss import WeightedMSELoss
 
-
-class WeightedMSELoss(torch.nn.Module):
-    def __init__(self, weight_for_0, weight_for_1, beta):
-        super().__init__()
-        self.weight_for_0 = weight_for_0
-        self.weight_for_1 = weight_for_1
-        self.beta = beta
-
-    def forward(self, input, target, z):
-        weights = torch.where(target == 1, self.weight_for_1, self.weight_for_0)
-        if self.beta == 0:
-            return torch.mean(weights * (input - target) ** 2)
-        else:
-            true_samples = torch.randn((200, z_dim), requires_grad=False, device=input.device)
-            mmd = self.beta * compute_mmd(true_samples, z)
-            return torch.mean(weights * (input - target) ** 2) + mmd
+import wandb
+from lightning.pytorch.loggers import WandbLogger
+from lightning.pytorch.callbacks import ModelCheckpoint
 
 
 class LitAutoEncoder(L.LightningModule):
@@ -35,7 +22,7 @@ class LitAutoEncoder(L.LightningModule):
         super().__init__()
         self.encoder = encoder
         self.decoder = decoder
-        self.loss_func: WeightedMSELoss = WeightedMSELoss(weight_for_0, weight_for_1, beta)
+        self.loss_func: WeightedMSELoss = WeightedMSELoss(weight_for_0, weight_for_1, beta, z_dim)
 
         self.test_losses = []
 
@@ -93,14 +80,19 @@ class CustomCallbacks(L.Callback):
             samples = samples.permute(0, 2, 3, 1).contiguous().cpu().data.numpy()
             plt.imshow(Utility.convert_to_display(samples), cmap='Greys_r')
 
-            # store in log folder
-            plt.savefig(f"./lightning_logs/version_{trainer.logger.version}/generated_images_epoch_{trainer.current_epoch}.png")
-
-            # plt.show()
+            # store in log folder (wandb log folder)
+            wandb_folder = wandb.run.dir
+            plt.savefig(f"{wandb_folder}/epoch_{trainer.current_epoch}.png")
 
 
 if __name__ == "__main__":
     torch.set_float32_matmul_precision('medium')
+
+    wandb.init(project="autoencoder")
+    wandb_logger = WandbLogger()
+    checkpoint_dir = f"{wandb.run.dir}/checkpoints"
+    checkpoint_callback = ModelCheckpoint(dirpath=checkpoint_dir, save_top_k=1, verbose=True, monitor='val_loss', mode='min', save_last=True)
+
 
     is_MNIST: bool = False
     z_dim = 2
@@ -114,9 +106,16 @@ if __name__ == "__main__":
 
     # Train the model
     trainer = L.Trainer(limit_train_batches=.1, max_epochs=10, accelerator="gpu", devices="1",
-                        callbacks=[CustomCallbacks(plot_ever_n_epoch=4)])
+                        logger=wandb_logger,
+                        callbacks=[CustomCallbacks(plot_ever_n_epoch=4), checkpoint_callback])
     trainer.fit(model=autoencoder, datamodule=data)
     trainer.test(model=autoencoder, datamodule=data)
 
+    wandb.finish()
+
     # tensorboard --logdir .
     # tensorboard --logdir ./lightning_logs
+
+    # wandb commands:
+    # wandb login (or wandb login your-api-key)
+    # wandb online

@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from utility import Utility
+import yaml
 
 
 def display_embeddings(embeddings, path):
@@ -26,16 +27,15 @@ def display_images(images, path):
 
 if __name__ == "__main__":
     # Load checkpoint
-    z_dim = 2 #32  # 4096
+    z_dim = 2  # 32  # 4096
     height = 64
     encoder = Encoder(latent_dim=z_dim, img_size=(1, height, height))
     decoder = Decoder(latent_dim=z_dim, img_size=(1, height, height))
-    # last number in the directory
-    version = str(Utility.get_latest_version())
-    # version = "101"  # 49
-    checkpoint_dir = f"./lightning_logs/version_{version}/checkpoints"
-    files_in_checkpoint_dir = Utility.get_files_in_directory(checkpoint_dir)
-    checkpoint = f"{checkpoint_dir}/{files_in_checkpoint_dir[-1]}"
+
+    version_name = Utility.get_latest_version()
+
+    logs_dir = f"./wandb/{version_name}/files"
+    checkpoint = f"{logs_dir}/checkpoints/last.ckpt"
     autoencoder = LitAutoEncoder.load_from_checkpoint(checkpoint, encoder=encoder, decoder=decoder)
 
     # Choose your trained nn.Module
@@ -49,16 +49,15 @@ if __name__ == "__main__":
         x = x.to(autoencoder.device)
         x = x[:100]  # dimension: (100, 1, 64, 64)
         # save in the checkpoint directory
-        display_images(x, path=f"{checkpoint_dir}/eval_original_images.png")
+        display_images(x, path=f"{logs_dir}/eval_original_images.png")
         z = encoder(x)
-        display_embeddings(z, path=f"{checkpoint_dir}/eval_im_enc_decode.png")
+        display_embeddings(z, path=f"{logs_dir}/eval_im_enc_decode.png")
         break
 
     datamodule.teardown("test")
 
     # gen_z = torch.randn((100, z_dim), requires_grad=False, device=autoencoder.device)
     # display_embeddings(gen_z)
-
 
 # interesting models are: 104 (32 dim)
 # 105 (8 dim), 106 (2 dim)

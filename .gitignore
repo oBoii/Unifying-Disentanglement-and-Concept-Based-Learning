@@ -3,3 +3,5 @@ tmp/*
 lightning_logs/*
 __pycache__/*
 dsprites-dataset/
+awa2-dataset/
+wandb/
