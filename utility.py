@@ -39,18 +39,18 @@ class Utility:
         return sorted(Utility.get_directories_in_directory("./wandb"))[-1]  # eg: "run-20211007_123456-3k4j5l6m"
 
     @staticmethod
-    def setup(dataset):
+    def setup(dataset, batch_size: int = 32, num_workers: int = 1):
         if dataset == DatasetType.MNIST:
             project_name = "autoencoder_mnist"
-            data = MNISTDataModule()
+            data = MNISTDataModule(batch_size=batch_size, num_workers=num_workers)
             im_shape = (1, 28, 28)
         elif dataset == DatasetType.DSPRITE:
             project_name = "autoencoder_dsprites"
-            data = DSPRITEDataModule(batch_size=200)
+            data = DSPRITEDataModule(batch_size=batch_size, num_workers=num_workers)
             im_shape = (1, 64, 64)
         elif dataset == DatasetType.AWA2:
             project_name = "autoencoder_awa"
-            data = AnimalDataModule(batch_size=400, num_workers=10)
+            data = AnimalDataModule(batch_size=batch_size, num_workers=num_workers)
             im_shape = (3, 64, 64)
         else:
             raise ValueError("Invalid dataset type")

@@ -1,15 +1,12 @@
-import torch
-import lightning as L
-from architecture import Encoder, Decoder
-from datasettype import DatasetType
-from main import LitAutoEncoder
-import numpy as np
 import matplotlib.pyplot as plt
-from utility import Utility
+from architecture import Encoder, Decoder
 from args import parse_args
+from datasettype import DatasetType
+from lit_autoencoder import LitAutoEncoder
+from utility import Utility
 
 
-def display_embeddings(embeddings, path):
+def display_embeddings(decoder, embeddings, path):
     samples = decoder(embeddings)  # dimension: (100, 1, 64, 64)
     display_images(samples, path)
 
@@ -22,18 +19,18 @@ def display_images(images, path):
         plt.imshow(Utility.convert_to_display(images), cmap='Greys_r')
         plt.show()
 
+def main(run_name: str):
+    print("Evaluating the model")
 
-if __name__ == "__main__":
     args = parse_args()
     z_dim = args.z
     dataset = DatasetType(args.dataset)
-    epochs = args.epochs
-    batch_size = args.batch_size
     lr = args.lr
+    epochs = args.epochs
     limit_train_batches = args.limit_train_batches
-    run_name = args.run_name
+    batch_size = 200 # override the batch size
 
-    data_module, im_shape, project_name = Utility.setup(dataset)
+    data_module, im_shape, project_name = Utility.setup(dataset, batch_size, num_workers=1)
 
     encoder = Encoder(latent_dim=z_dim, img_size=im_shape)
     decoder = Decoder(latent_dim=z_dim, img_size=im_shape)
@@ -58,7 +55,7 @@ if __name__ == "__main__":
         # save in the checkpoint directory
         display_images(x, path=f"{logs_dir}/eval_original_images.png")
         z = encoder(x)
-        display_embeddings(z, path=f"{logs_dir}/eval_im_enc_decode.png")
+        display_embeddings(decoder, z, path=f"{logs_dir}/eval_im_enc_decode.png")
         break
 
     data_module.teardown("test")
@@ -66,6 +63,13 @@ if __name__ == "__main__":
     # gen_z = torch.randn((100, z_dim), requires_grad=False, device=autoencoder.device)
     # display_embeddings(gen_z)
 
+    print("Evaluation done")
+
+
 # interesting models are: 104 (32 dim)
 # 105 (8 dim), 106 (2 dim)
 # 103 ? 4096 dim
+
+
+if __name__ == "__main__":
+    main('')

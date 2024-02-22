@@ -11,5 +11,4 @@ def parse_args():
     parser.add_argument('--lr', type=float, default=1e-5, help='Learning rate')
     parser.add_argument('--limit_train_batches', type=float, default=1.0,
                         help='Fraction of training data to use per epoch')
-    parser.add_argument('--run_name', type=str, default='', help='Run name, eg run-20240222_150106-9w4ls8zw')
     return parser.parse_args()

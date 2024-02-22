@@ -13,6 +13,8 @@ cd .. # awa2-dataset
 cd .. # Unifying-Disentanglement-and-Concept-Based-Learning
 python resize_awa2.py
 
+sudo apt update;
+sudo apt install rsync;
 # copy the remaining files in awa2-dataset/AwA2-data/Animals_with_Attributes2/ to Animals_with_Attributes2_resized/
 # but exclude the JPEGImages folder
 rsync -av --progress awa2-dataset/AwA2-data/Animals_with_Attributes2/ awa2-dataset/AwA2-data/Animals_with_Attributes2_resized/ --exclude=JPEGImages

@@ -17,9 +17,10 @@ from architecture import Encoder
 
 
 class MNISTDataModule(L.LightningDataModule):
-    def __init__(self, data_dir: str = "./tmp/MNIST", batch_size: int = 200):
+    def __init__(self, data_dir: str = "./tmp/MNIST", batch_size: int = 200, num_workers: int = 1):
         super().__init__()
         self.data_dir = data_dir
+        self.num_workers = num_workers
         self.batch_size = batch_size
 
     def setup(self, stage: str):
@@ -33,7 +34,7 @@ class MNISTDataModule(L.LightningDataModule):
         return self._dataloader(self.mnist_test)
 
     def _dataloader(self, dataset):
-        return DataLoader(dataset, batch_size=self.batch_size, num_workers=19, pin_memory=True,
+        return DataLoader(dataset, batch_size=self.batch_size, num_workers=self.num_workers, pin_memory=True,
                           persistent_workers=True, shuffle=True)
 
 
@@ -153,11 +154,11 @@ class AnimalDataModule(L.LightningDataModule):
 
 
 class DSPRITEDataModule(L.LightningDataModule):
-    def __init__(self, data_dir: str = "./dsprites-dataset/", batch_size: int = 100, workers: int = 1):
+    def __init__(self, data_dir: str = "./dsprites-dataset/", batch_size: int = 100, num_workers: int = 1):
         super().__init__()
         self.data_dir = data_dir
         self.batch_size = batch_size
-        self.workers = workers
+        self.num_workers = num_workers
 
     def setup(self, stage: str):
         self.transform = transforms.Compose([
@@ -185,7 +186,7 @@ class DSPRITEDataModule(L.LightningDataModule):
         return self._dataloader(self.test_dataset, shuffle=False)
 
     def _dataloader(self, dataset, shuffle: bool):
-        return DataLoader(dataset, batch_size=self.batch_size, num_workers=self.workers, pin_memory=True,
+        return DataLoader(dataset, batch_size=self.batch_size, num_workers=self.num_workers, pin_memory=True,
                           persistent_workers=True, shuffle=shuffle)
 
 
