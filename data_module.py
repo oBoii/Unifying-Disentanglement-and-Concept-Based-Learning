@@ -1,3 +1,5 @@
+from glob import glob
+
 import lightning as L
 import torch
 from torch.utils.data import DataLoader, random_split, TensorDataset
@@ -9,6 +11,7 @@ from torchvision import transforms
 import numpy as np
 import os
 import cv2
+from PIL import Image
 
 from architecture import Encoder
 
@@ -62,6 +65,90 @@ class DSPRITEDataset(Dataset):
         return image, label
 
 
+class AnimalDataset(Dataset):
+    # https://github.com/dfan/awa2-zero-shot-learning/blob/master/AnimalDataset.py
+    def __init__(self, transform, data_dir='awa2-dataset/AwA2-data/Animals_with_Attributes2_resized'):
+        self.transform = transform
+
+        class_to_index = dict()
+        # Build dictionary of indices to classes
+        with open(f'{data_dir}/classes.txt') as f:
+            index = 0
+            for line in f:
+                class_name = line.split('\t')[1].strip()
+                class_to_index[class_name] = index
+                index += 1
+        self.class_to_index = class_to_index
+
+        img_names = []
+        img_index = []
+        with open(f'{data_dir}/classes.txt') as f:
+            for line in f:
+                class_name = line.split('\t')[1].strip()  # split the line and take the second element
+                FOLDER_DIR = os.path.join(f'{data_dir}/JPEGImages', class_name)
+                file_descriptor = os.path.join(FOLDER_DIR, '*.jpg')
+                files = glob(file_descriptor)  # glob is used to get all the files in the folder
+
+                class_index = class_to_index[class_name]  # use the class name as the key
+                for file_name in files:
+                    img_names.append(file_name)
+                    img_index.append(class_index)
+        self.img_names = img_names
+        self.img_index = img_index
+
+    def __getitem__(self, index):
+        im = Image.open(self.img_names[index])
+        if im.getbands()[0] == 'L':
+            im = im.convert('RGB')
+        if self.transform:
+            im = self.transform(im)
+        if im.shape != (3, 64, 64):
+            print(f"Image shape is {im.shape} for {self.img_names[index]}")
+
+        im_index = self.img_index[index]
+
+        # im_predicate = self.predicate_binary_mat[im_index, :]
+        im_predicate = torch.zeros(85)  # todo
+        return im, im_predicate, self.img_names[index], im_index
+
+    def __len__(self):
+        return len(self.img_names)
+
+
+class AnimalDataModule(L.LightningDataModule):
+    def __init__(self, data_dir: str = 'awa2-dataset/AwA2-data/Animals_with_Attributes2_resized',
+                 batch_size: int = 200):
+        super().__init__()
+        self.data_dir = data_dir
+        self.batch_size = batch_size
+
+    def setup(self, stage: str):
+        self.transform = transforms.Compose([transforms.ToTensor()])
+
+        self.awa = AnimalDataset(transform=self.transform, data_dir=self.data_dir)
+        # Determine the lengths of splits
+        train_len = int(len(self.awa) * 0.7)
+        val_len = int(len(self.awa) * 0.15)
+        test_len = len(self.awa) - train_len - val_len
+
+        # Split the dataset
+        self.train_dataset, self.val_dataset, self.test_dataset = random_split(
+            self.awa, [train_len, val_len, test_len])
+
+    def train_dataloader(self):
+        return self._dataloader(self.train_dataset, shuffle=True)
+
+    def val_dataloader(self):
+        return self._dataloader(self.val_dataset, shuffle=False)
+
+    def test_dataloader(self):
+        return self._dataloader(self.test_dataset, shuffle=False)
+
+    def _dataloader(self, dataset, shuffle: bool):
+        return DataLoader(dataset, batch_size=self.batch_size, num_workers=1, pin_memory=True,
+                          persistent_workers=True, shuffle=shuffle)
+
+
 class DSPRITEDataModule(L.LightningDataModule):
     def __init__(self, data_dir: str = "./dsprites-dataset/", batch_size: int = 100, workers: int = 1):
         super().__init__()
@@ -100,8 +187,13 @@ class DSPRITEDataModule(L.LightningDataModule):
 
 
 if __name__ == "__main__":
-    mnist = MNISTDataModule()
-    mnist.setup("train")
-    for x, y in mnist.train_dataloader():
-        print(x.shape, y.shape)  # torch.Size([200, 1, 28, 28]) torch.Size([200])
-        break
+    # mnist = MNISTDataModule()
+    # mnist.setup("train")
+    # for x, y in mnist.train_dataloader():
+    #     print(x.shape, y.shape)  # torch.Size([200, 1, 28, 28]) torch.Size([200])
+    #     break
+
+    awa = AnimalDataset(transform=transforms.Compose([transforms.ToTensor()]))
+    print(len(awa))  # 37322
+    item = awa[0]
+    print(awa[0])

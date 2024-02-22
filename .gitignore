@@ -5,3 +5,4 @@ __pycache__/*
 dsprites-dataset/
 awa2-dataset/
 wandb/
+.vscode/settings.json
