@@ -4,12 +4,12 @@ import torch
 # Encoder and decoder use the DC-GAN architecture
 class Encoder(torch.nn.Module):
     def __init__(self, img_size: tuple, latent_dim: int = 10):
-        height = img_size[1]
+        channels, height, width = img_size
         z_dim = latent_dim
 
         super(Encoder, self).__init__()
         self.model = torch.nn.ModuleList([
-            torch.nn.Conv2d(1, 64, 4, 2, padding=1),
+            torch.nn.Conv2d(channels, 64, 4, 2, padding=1),
             torch.nn.LeakyReLU(),
             torch.nn.Conv2d(64, 128, 4, 2, padding=1),
             torch.nn.LeakyReLU(),
@@ -27,7 +27,7 @@ class Encoder(torch.nn.Module):
 
 class Decoder(torch.nn.Module):
     def __init__(self, img_size: tuple, latent_dim: int = 10):
-        height = img_size[1]
+        channels, height, width = img_size
         z_dim = latent_dim
 
         super(Decoder, self).__init__()
@@ -39,7 +39,7 @@ class Decoder(torch.nn.Module):
             torch.nn.Unflatten(1, (128, height // 4, height // 4)),
             torch.nn.ConvTranspose2d(128, 64, 4, 2, padding=1),
             torch.nn.ReLU(),
-            torch.nn.ConvTranspose2d(64, 1, 4, 2, padding=1),
+            torch.nn.ConvTranspose2d(64, channels, 4, 2, padding=1),
             torch.nn.Sigmoid()
         ])
 

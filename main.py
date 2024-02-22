@@ -5,24 +5,27 @@ import torch
 from torch import optim
 import lightning as L
 
-from data_module import MNISTDataModule, DSPRITEDataModule
+from data_module import MNISTDataModule, DSPRITEDataModule, AnimalDataModule
+from datasettype import DatasetType
 from utility import Utility
 from architecture import Encoder, Decoder
 import matplotlib.pyplot as plt
-from loss import WeightedMSELoss
+from loss import MSE
 
 import wandb
 from lightning.pytorch.loggers import WandbLogger
 from lightning.pytorch.callbacks import ModelCheckpoint
 
+from args import parse_args
+
 
 class LitAutoEncoder(L.LightningModule):
-    def __init__(self, encoder: Encoder, decoder: Decoder,
-                 weight_for_0: float = 1.0, weight_for_1: float = 1.0, beta: float = 1.0, z_dim: int = 32):
+    def __init__(self, encoder: Encoder, decoder: Decoder, z_dim: int, lr: float, beta: float = 1.0):
         super().__init__()
         self.encoder = encoder
         self.decoder = decoder
-        self.loss_func: WeightedMSELoss = WeightedMSELoss(weight_for_0, weight_for_1, beta, z_dim)
+        self.loss_func: MSE = MSE(beta, z_dim)
+        self.lr = lr
 
         self.test_losses = []
 
@@ -49,7 +52,7 @@ class LitAutoEncoder(L.LightningModule):
         return loss
 
     def configure_optimizers(self):
-        optimizer = optim.Adam(self.parameters(), lr=1e-5)
+        optimizer = optim.Adam(self.parameters(), lr=self.lr)
         return optimizer
 
     def test_step(self, batch, batch_idx):
@@ -85,27 +88,35 @@ class CustomCallbacks(L.Callback):
             plt.savefig(f"{wandb_folder}/epoch_{trainer.current_epoch}.png")
 
 
+# enum
 if __name__ == "__main__":
+    args = parse_args()
+    z_dim = args.z
+    dataset = DatasetType(args.dataset)
+    epochs = args.epochs
+    batch_size = args.batch_size
+    num_workers = args.num_workers
+    lr = args.lr
+    limit_train_batches = args.limit_train_batches
+    assert args.run_name == "", "Run name only useful for evaluation"
+
     torch.set_float32_matmul_precision('medium')
 
-    wandb.init(project="autoencoder")
+    data, im_shape, project_name = Utility.setup(dataset)
+
+    wandb.init(project="autoencoder_awa")
     wandb_logger = WandbLogger()
     checkpoint_dir = f"{wandb.run.dir}/checkpoints"
-    checkpoint_callback = ModelCheckpoint(dirpath=checkpoint_dir, save_top_k=1, verbose=True, monitor='val_loss', mode='min', save_last=True)
+    checkpoint_callback = ModelCheckpoint(dirpath=checkpoint_dir, save_top_k=1, verbose=True, monitor='val_loss',
+                                          mode='min', save_last=True)
 
+    encoder = Encoder(latent_dim=z_dim, img_size=im_shape)
+    decoder = Decoder(latent_dim=z_dim, img_size=im_shape)
 
-    is_MNIST: bool = False
-    z_dim = 2
-    height = 28 if is_MNIST else 64
-    encoder = Encoder(latent_dim=z_dim, img_size=(1, height, height))
-    decoder = Decoder(latent_dim=z_dim, img_size=(1, height, height))
-
-    autoencoder = LitAutoEncoder(encoder, decoder, z_dim=z_dim)
-
-    data = MNISTDataModule() if is_MNIST else DSPRITEDataModule(workers=10)
+    autoencoder = LitAutoEncoder(encoder, decoder, z_dim, lr)
 
     # Train the model
-    trainer = L.Trainer(limit_train_batches=.1, max_epochs=10, accelerator="gpu", devices="1",
+    trainer = L.Trainer(limit_train_batches=.1, max_epochs=epochs, accelerator="gpu", devices="1",
                         logger=wandb_logger,
                         callbacks=[CustomCallbacks(plot_ever_n_epoch=4), checkpoint_callback])
     trainer.fit(model=autoencoder, datamodule=data)

@@ -1,14 +1,12 @@
 import torch
 import lightning as L
 from architecture import Encoder, Decoder
-# from architecture_burgess import Encoder, Decoder
-from data_module import DSPRITEDataModule
+from datasettype import DatasetType
 from main import LitAutoEncoder
 import numpy as np
 import matplotlib.pyplot as plt
-
 from utility import Utility
-import yaml
+from args import parse_args
 
 
 def display_embeddings(embeddings, path):
@@ -26,26 +24,35 @@ def display_images(images, path):
 
 
 if __name__ == "__main__":
-    # Load checkpoint
-    z_dim = 2  # 32  # 4096
-    height = 64
-    encoder = Encoder(latent_dim=z_dim, img_size=(1, height, height))
-    decoder = Decoder(latent_dim=z_dim, img_size=(1, height, height))
+    args = parse_args()
+    z_dim = args.z
+    dataset = DatasetType(args.dataset)
+    epochs = args.epochs
+    batch_size = args.batch_size
+    lr = args.lr
+    limit_train_batches = args.limit_train_batches
+    run_name = args.run_name
 
-    version_name = Utility.get_latest_version()
+    data_module, im_shape, project_name = Utility.setup(dataset)
 
-    logs_dir = f"./wandb/{version_name}/files"
+    encoder = Encoder(latent_dim=z_dim, img_size=im_shape)
+    decoder = Decoder(latent_dim=z_dim, img_size=im_shape)
+
+    if run_name == "":
+        run_name = Utility.get_latest_version()
+        print(f"No run name provided. Using the latest version. Run name: {run_name}")
+
+    logs_dir = f"./wandb/{run_name}/files"
     checkpoint = f"{logs_dir}/checkpoints/last.ckpt"
-    autoencoder = LitAutoEncoder.load_from_checkpoint(checkpoint, encoder=encoder, decoder=decoder)
+    autoencoder = LitAutoEncoder.load_from_checkpoint(checkpoint, encoder=encoder, decoder=decoder, z_dim=z_dim, lr=lr)
 
     # Choose your trained nn.Module
     encoder = autoencoder.encoder
     encoder.eval()
 
-    datamodule = DSPRITEDataModule(workers=1)
-    datamodule.prepare_data()
-    datamodule.setup("test")
-    for x, y in datamodule.test_dataloader():
+    data_module.prepare_data()
+    data_module.setup("test")
+    for x, y in data_module.test_dataloader():
         x = x.to(autoencoder.device)
         x = x[:100]  # dimension: (100, 1, 64, 64)
         # save in the checkpoint directory
@@ -54,7 +61,7 @@ if __name__ == "__main__":
         display_embeddings(z, path=f"{logs_dir}/eval_im_enc_decode.png")
         break
 
-    datamodule.teardown("test")
+    data_module.teardown("test")
 
     # gen_z = torch.randn((100, z_dim), requires_grad=False, device=autoencoder.device)
     # display_embeddings(gen_z)

@@ -109,7 +109,9 @@ class AnimalDataset(Dataset):
 
         # im_predicate = self.predicate_binary_mat[im_index, :]
         im_predicate = torch.zeros(85)  # todo
-        return im, im_predicate, self.img_names[index], im_index
+        class_index = self.img_index[index]
+        return im, im_predicate
+        # im, #im_predicate, self.img_names[index], im_index
 
     def __len__(self):
         return len(self.img_names)
@@ -117,10 +119,11 @@ class AnimalDataset(Dataset):
 
 class AnimalDataModule(L.LightningDataModule):
     def __init__(self, data_dir: str = 'awa2-dataset/AwA2-data/Animals_with_Attributes2_resized',
-                 batch_size: int = 200):
+                 batch_size: int = 200, num_workers: int = 1):
         super().__init__()
         self.data_dir = data_dir
         self.batch_size = batch_size
+        self.num_workers = num_workers
 
     def setup(self, stage: str):
         self.transform = transforms.Compose([transforms.ToTensor()])
@@ -145,7 +148,7 @@ class AnimalDataModule(L.LightningDataModule):
         return self._dataloader(self.test_dataset, shuffle=False)
 
     def _dataloader(self, dataset, shuffle: bool):
-        return DataLoader(dataset, batch_size=self.batch_size, num_workers=1, pin_memory=True,
+        return DataLoader(dataset, batch_size=self.batch_size, num_workers=self.num_workers, pin_memory=True,
                           persistent_workers=True, shuffle=shuffle)
 
 
