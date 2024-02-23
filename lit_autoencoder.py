@@ -1,3 +1,5 @@
+from typing import Optional
+
 import lightning as L
 from architecture import Encoder, Decoder
 from loss import MSE
@@ -15,7 +17,9 @@ class LitAutoEncoder(L.LightningModule):
 
         self.test_losses = []
 
-        self.save_hyperparameters(ignore=["encoder", "decoder", "loss_func"])
+        self.save_hyperparameters(ignore=["encoder", "decoder", "loss_func", "wandb"])
+        # if wandb:
+        #     wandb.config.update()
 
     def training_step(self, batch, batch_idx):
         x, y = batch  # x.shape: (200, 1, 64, 64), y.shape: (200, 1, 6)

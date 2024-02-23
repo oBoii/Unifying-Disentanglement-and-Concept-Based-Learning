@@ -3,6 +3,7 @@ import os
 
 from data_module import MNISTDataModule, DSPRITEDataModule, AnimalDataModule
 from datasettype import DatasetType
+import matplotlib.pyplot as plt
 
 
 class Utility:
@@ -20,7 +21,7 @@ class Utility:
 
         # samples = np.transpose(samples, axes=[1, 0, 2, 3])
         # samples = np.reshape(samples, [height * cnt, width * cnt])
-        return samples
+        return samples # shape: (64, 64, 3)
 
     @staticmethod
     def get_files_in_directory(directory):
@@ -56,3 +57,20 @@ class Utility:
             raise ValueError("Invalid dataset type")
 
         return data, im_shape, project_name
+
+
+    @staticmethod
+    def display_embeddings(decoder, embeddings, path):
+        samples = decoder(embeddings)  # dimension: (100, 1, 64, 64)
+        return Utility.display_images(samples, path)
+
+    @staticmethod
+    def display_images(images, path):
+        images = images.permute(0, 2, 3, 1).contiguous().cpu().data.numpy()  # (100, 64, 64, 1)
+        if path is not None:
+            plt.imsave(path, Utility.convert_to_display(images), cmap='Greys_r')
+        else:
+            plt.imshow(Utility.convert_to_display(images), cmap='Greys_r')
+            plt.show()
+
+        return images

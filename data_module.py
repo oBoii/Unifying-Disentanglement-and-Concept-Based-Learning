@@ -1,19 +1,16 @@
+import os
 from glob import glob
 
+import cv2
 import lightning as L
+import numpy as np
 import torch
-from torch.utils.data import DataLoader, random_split, TensorDataset
+from PIL import Image
+from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import random_split
+from torchvision import transforms
 from torchvision.datasets import MNIST
 from torchvision.transforms import ToTensor
-from torch.utils.data import Dataset, DataLoader
-from torchvision.datasets import ImageFolder
-from torchvision import transforms
-import numpy as np
-import os
-import cv2
-from PIL import Image
-
-from architecture import Encoder
 
 
 class MNISTDataModule(L.LightningDataModule):

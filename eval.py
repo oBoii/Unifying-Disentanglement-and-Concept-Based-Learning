@@ -6,19 +6,6 @@ from lit_autoencoder import LitAutoEncoder
 from utility import Utility
 
 
-def display_embeddings(decoder, embeddings, path):
-    samples = decoder(embeddings)  # dimension: (100, 1, 64, 64)
-    display_images(samples, path)
-
-
-def display_images(images, path):
-    images = images.permute(0, 2, 3, 1).contiguous().cpu().data.numpy()  # (100, 64, 64, 1)
-    if path is not None:
-        plt.imsave(path, Utility.convert_to_display(images), cmap='Greys_r')
-    else:
-        plt.imshow(Utility.convert_to_display(images), cmap='Greys_r')
-        plt.show()
-
 def main(run_name: str):
     print("Evaluating the model")
 
@@ -53,9 +40,9 @@ def main(run_name: str):
         x = x.to(autoencoder.device)
         x = x[:100]  # dimension: (100, 1, 64, 64)
         # save in the checkpoint directory
-        display_images(x, path=f"{logs_dir}/eval_original_images.png")
+        Utility.display_images(x, path=f"{logs_dir}/eval_original_images.png")
         z = encoder(x)
-        display_embeddings(decoder, z, path=f"{logs_dir}/eval_im_enc_decode.png")
+        Utility.display_embeddings(decoder, z, path=f"{logs_dir}/eval_im_enc_decode.png")
         break
 
     data_module.teardown("test")
